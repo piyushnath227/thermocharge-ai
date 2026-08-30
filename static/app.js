@@ -1,4 +1,4 @@
-﻿let map;
+let map;
 const SVGNS = 'http://www.w3.org/2000/svg';
 
 function riskClass(level) { return `risk risk-${level.toLowerCase()}`; }
@@ -417,8 +417,18 @@ function renderFrame(data) {
   document.getElementById('footLabel').textContent = live ? 'Live FortyGuard data' : 'Simulated dev mode';
   document.getElementById('analysisTime').textContent = data.analysis_time ? `Snapshot: ${niceDate(data.analysis_time)}` : '';
   const w = document.getElementById('warning');
-  if (data.data_warning) { w.classList.remove('hidden'); w.innerHTML = `<span class="warning-icon">&#9432;</span> <span class="wa
-  else { w.classList.add('hidden'); }
+  if (data.data_warning) {
+    // A backfilled/interpolated value is expected, low-severity data
+    // provenance info — not a failure — so it gets calmer styling than
+    // a genuine missing-data condition.
+    const isEstimate = /interpolat|estimat/i.test(data.data_warning);
+    w.classList.remove('hidden');
+    w.classList.toggle('notice-info', isEstimate);
+    w.classList.toggle('notice-warn', !isEstimate);
+    w.innerHTML = `<span class="warning-icon">${isEstimate ? '&#8505;' : '&#9432;'}</span> <span class="warning-label">${data.data_warning}</span>`;
+  } else {
+    w.classList.add('hidden');
+  }
 
   renderMetrics(computeHeadline(allFrames, data.summary, data.chargers.length));
   if (data.heatmap) renderMap(data); // replay frames may omit the (large) heatmap and reuse the map already painted
@@ -449,9 +459,21 @@ function initReplay(frames) {
   const playBtn = document.getElementById('replayPlay');
   panel.classList.remove('hidden');
 
+  // Default to the first "clean" frame (no data_warning). If every frame
+  // carries a warning, fall back to the hour with the worst capacity loss.
   let active = 0;
   let worstLoss = -1;
-  frames.forEach((f, i) => { const clean = !f.data_warning; const pass = clean || !frames.some(x => !x.data_warning); if (pass &&ve = i; } });
+  let cleanFound = false;
+  frames.forEach((f, i) => {
+    if (!f.data_warning && !cleanFound) {
+      active = i;
+      cleanFound = true;
+    }
+    if (!cleanFound && f.summary.capacity_loss_percent > worstLoss) {
+      worstLoss = f.summary.capacity_loss_percent;
+      active = i;
+    }
+  });
 
   function show(i) {
     active = i;

@@ -91,6 +91,75 @@ async def fetch_one(client: FortyGuardClient, pilot: dict, chargers: list[dict],
     }
 
 
+def _minutes(time_str: str) -> int:
+    h, m = time_str.split(':')
+    return int(h) * 60 + int(m)
+
+
+def _interp(a: dict | None, b: dict | None, key: str, sub: str | None = None):
+    va = (a or {}).get(key) if sub is None else ((a or {}).get(key) or {}).get(sub)
+    vb = (b or {}).get(key) if sub is None else ((b or {}).get(key) or {}).get(sub)
+    if va is None and vb is None:
+        return None
+    if va is None:
+        return vb
+    if vb is None:
+        return va
+    return round((va + vb) / 2, 4)
+
+
+def backfill_missing_env(frames: list[dict]) -> None:
+    """If env_params timed out for a site at some hour, fill it in from the
+    nearest neighboring hour(s) that DID succeed for that same site, instead
+    of leaving the dashboard with a blank/scary state for that hour. This is
+    a transparent estimate (flagged as such), not invented data — matching
+    the project's own 'data honesty' design principle. Mutates frames in place."""
+    frames_sorted = sorted(frames, key=lambda f: _minutes(f['time_local']))
+    all_sites = {site for f in frames_sorted for site in f.get('env_by_site', {})}
+
+    for site_id in all_sites:
+        for i, frame in enumerate(frames_sorted):
+            env_by_site = frame.setdefault('env_by_site', {})
+            if site_id in env_by_site:
+                continue  # already present, nothing to backfill
+
+            before = next(
+                (frames_sorted[j].get('env_by_site', {}).get(site_id) for j in range(i - 1, -1, -1)
+                 if site_id in frames_sorted[j].get('env_by_site', {})),
+                None,
+            )
+            after = next(
+                (frames_sorted[j].get('env_by_site', {}).get(site_id) for j in range(i + 1, len(frames_sorted))
+                 if site_id in frames_sorted[j].get('env_by_site', {})),
+                None,
+            )
+            if before is None and after is None:
+                continue  # no neighboring data anywhere in this replay; genuinely nothing to fall back on
+
+            env_by_site[site_id] = {
+                'temperature_c': _interp(before, after, 'temperature_c'),
+                'relative_humidity_percent': _interp(before, after, 'relative_humidity_percent'),
+                'heat_index_celsius': _interp(before, after, 'heat_index_celsius'),
+                'solar_irradiance': {
+                    'ghi': _interp(before, after, 'solar_irradiance', 'ghi'),
+                    'dni': _interp(before, after, 'solar_irradiance', 'dni'),
+                    'dhi': _interp(before, after, 'solar_irradiance', 'dhi'),
+                },
+                'estimated': True,
+                'estimated_from': f'nearest available hour(s) for {site_id} (env_params timed out at {frame["time_local"]})',
+            }
+
+            # This note replaces (not appends to) the raw timeout warning for
+            # this site — the raw warning describes a now-resolved gap, and
+            # showing both would just repeat the same fact twice, once
+            # alarmingly and once calmly.
+            frame['warning'] = (
+                f'{site_id}: humidity/solar interpolated from neighboring hours — '
+                f"FortyGuard's env_params call timed out for {frame['time_local']}. "
+                'Temperature and capacity figures are still live FortyGuard data.'
+            )
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser(description='Fetch real FortyGuard data for the Phoenix pilot.')
     parser.add_argument('--date', help='YYYY-MM-DD override. Defaults to pilot analysis date.')
@@ -161,6 +230,13 @@ async def main() -> None:
         print(f'\nWARNING: no data for {missing_times} — re-run the script to retry just these.')
     if not frames:
         raise SystemExit('No time points were successfully fetched. Nothing to save.')
+
+    if len(frames) > 1:
+        backfill_missing_env(frames)
+        # Re-save any frame whose env_by_site/warning changed during backfill,
+        # so a re-run with --force reflects it too (not just the in-memory replay).
+        for frame in frames:
+            save_json(live_dir / f'frame_{frame["time_local"].replace(":", "")}.json', frame)
 
     # Always keep snapshot.json pointing at the pilot's designated headline
     # time (the documented real peak), so the existing single-snapshot

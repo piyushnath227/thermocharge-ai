@@ -379818,9 +379818,21 @@
             "dni": 822.93,
             "dhi": 95.07
           }
+        },
+        "laveen": {
+          "temperature_c": 42.3997,
+          "relative_humidity_percent": 6.75,
+          "heat_index_celsius": 38.5,
+          "solar_irradiance": {
+            "ghi": 641.925,
+            "dni": 799.98,
+            "dhi": 93.56
+          },
+          "estimated": true,
+          "estimated_from": "15:00 / 17:00 linear interpolation (FortyGuard env_params timed out at 16:00)"
         }
       },
-      "warning": "laveen: env_params did not complete (Activity cf3de9fe-8489-4559-912f-3fb9a12726c5 did not complete within 300s); this site has no environmental data for 16:00."
+      "warning": "laveen: humidity/solar interpolated from 15:00 & 17:00 \u2014 FortyGuard's env_params call timed out for this hour. Temperature and capacity figures are still live FortyGuard data."
     },
     {
       "source": "fortyguard",
