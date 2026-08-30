@@ -1,4 +1,4 @@
-let map;
+﻿let map;
 const SVGNS = 'http://www.w3.org/2000/svg';
 
 function riskClass(level) { return `risk risk-${level.toLowerCase()}`; }
@@ -417,7 +417,7 @@ function renderFrame(data) {
   document.getElementById('footLabel').textContent = live ? 'Live FortyGuard data' : 'Simulated dev mode';
   document.getElementById('analysisTime').textContent = data.analysis_time ? `Snapshot: ${niceDate(data.analysis_time)}` : '';
   const w = document.getElementById('warning');
-  if (data.data_warning) { w.classList.remove('hidden'); w.textContent = data.data_warning; }
+  if (data.data_warning) { w.classList.remove('hidden'); w.innerHTML = `<span class="warning-icon">&#9432;</span> <span class="wa
   else { w.classList.add('hidden'); }
 
   renderMetrics(computeHeadline(allFrames, data.summary, data.chargers.length));
@@ -451,7 +451,7 @@ function initReplay(frames) {
 
   let active = 0;
   let worstLoss = -1;
-  frames.forEach((f, i) => { if (f.summary.capacity_loss_percent > worstLoss) { worstLoss = f.summary.capacity_loss_percent; active = i; } });
+  frames.forEach((f, i) => { const clean = !f.data_warning; const pass = clean || !frames.some(x => !x.data_warning); if (pass &&ve = i; } });
 
   function show(i) {
     active = i;
