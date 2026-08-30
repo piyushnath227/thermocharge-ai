@@ -1,0 +1,1 @@
+"""ThermoCharge AI application package."""

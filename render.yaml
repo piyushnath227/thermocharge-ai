@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: thermocharge-ai
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: THERMOCHARGE_DATA_MODE
+        value: auto
+      - key: ALLOW_LIVE_REFRESH
+        value: false
+      - key: FORTYGUARD_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.6

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ThermoCharge AI</title>
+  <meta name="description" content="Heat-adjusted usable capacity, thermal risk & agent actions for EV charging networks." />
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>
+        </div>
+        <div class="brand-name">ThermoCharge<span>FortyGuard Hackathon 2026</span></div>
+      </div>
+      <nav class="nav">
+        <div class="nav-group-label">Platform</div>
+        <a class="nav-item active" data-target="metrics">
+          <span class="nav-ico" style="--ico-bg:rgba(79,185,255,.14);--ico-fg:var(--cyan)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+          </span>
+          Overview
+        </a>
+        <a class="nav-item" data-target="replaySection">
+          <span class="nav-ico" style="--ico-bg:rgba(245,185,66,.14);--ico-fg:var(--amber)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+          </span>
+          Heat Event Replay
+        </a>
+        <div class="nav-group-label">Pilot corridor</div>
+        <a class="nav-item" data-target="mapSection">
+          <span class="nav-ico" style="--ico-bg:rgba(255,122,77,.14);--ico-fg:var(--orange)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 21s7-6.4 7-11.5A7 7 0 0 0 5 9.5C5 14.6 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>
+          </span>
+          South Phoenix Map
+        </a>
+        <a class="nav-item" data-target="assetsSection">
+          <span class="nav-ico" style="--ico-bg:rgba(53,208,160,.14);--ico-fg:var(--green)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="7" y="2" width="10" height="6" rx="1.5"/><path d="M9 8v4a3 3 0 0 0 3 3v0a3 3 0 0 0 3-3V8"/><path d="M12 15v6M9 21h6"/></svg>
+          </span>
+          Charging Assets
+        </a>
+        <div class="nav-group-label">Data &amp; agent</div>
+        <a class="nav-item" data-target="askSection">
+          <span class="nav-ico" style="--ico-bg:rgba(139,124,246,.16);--ico-fg:var(--purple)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 5h16v10H9l-4 4V5z"/></svg>
+          </span>
+          Ask ThermoCharge
+        </a>
+        <a class="nav-item" data-target="traceSection">
+          <span class="nav-ico" style="--ico-bg:rgba(255,91,106,.14);--ico-fg:var(--red)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 6h16M4 12h10M4 18h13"/></svg>
+          </span>
+          Agent Trace
+        </a>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="foot-live"><span id="footDot" class="foot-dot"></span><span id="footLabel">Loading…</span></div>
+        <div class="foot-sub">FortyGuard thermal · Open-Meteo · OSM basemap</div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div>
+          <div class="crumb-title">ThermoCharge <span class="pill">EV Charging · Extreme Heat</span></div>
+          <div class="crumb-sub">Installed power is not always usable power under extreme heat — heat-adjusted capacity, thermal risk &amp; agent actions across the South Phoenix pilot corridor.</div>
+        </div>
+        <div class="topbar-right">
+          <div id="modeBadge" class="badge">Loading…</div>
+          <div id="analysisTime"></div>
+        </div>
+      </header>
+
+      <div id="warning" class="warning hidden"></div>
+
+      <main class="content">
+        <section id="replaySection" class="panel replay-panel hidden">
+          <div class="replay-label">Heat Event Replay<div class="micro">Jul 5, 2024 · Phoenix hit 118°F</div></div>
+          <div id="replayTabs" class="replay-tabs"></div>
+          <button id="replayPlay" class="play-btn">&#9654; Auto-play</button>
+        </section>
+
+        <section id="metrics" class="metrics"></section>
+
+        <section class="panel panel-pad">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Usable capacity across the pilot day</div>
+              <div class="panel-sub">Installed nameplate vs heat-adjusted usable capacity, 12:00–17:00 local — the shaded band is capacity lost to heat.</div>
+            </div>
+            <div id="capacityLegend" class="chart-legend"></div>
+          </div>
+          <div id="capacityChart" class="chart-wrap"></div>
+        </section>
+
+        <section class="charts-row">
+          <div class="panel panel-pad">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Ambient temperature vs derating onset</div>
+                <div class="panel-sub">Charger-site temperature by hour. Bars turn red once any asset crosses into CRITICAL risk.</div>
+              </div>
+            </div>
+            <div id="tempChart" class="chart-wrap"></div>
+          </div>
+          <div class="panel panel-pad">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Solar irradiance &amp; heat buildup</div>
+                <div class="panel-sub">FortyGuard/Open-Meteo GHI vs ambient temperature.</div>
+              </div>
+              <span class="chart-tag">Real data</span>
+            </div>
+            <div id="solarChart" class="chart-wrap"></div>
+          </div>
+        </section>
+
+        <section id="mapSection" class="split-row">
+          <div class="panel panel-pad map-panel">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">South Phoenix pilot corridor</div>
+                <div class="panel-sub" id="mapSub">Hyperlocal tile temperature + charger assets</div>
+              </div>
+              <div id="tempRange" class="temp-range"></div>
+            </div>
+            <div id="map"></div>
+          </div>
+          <div class="panel panel-pad">
+            <div class="panel-title">Recommended actions</div>
+            <div class="panel-sub">Agent-generated, ranked by impact. No physical charger control is executed.</div>
+            <div id="actions" class="actions"></div>
+          </div>
+        </section>
+
+        <section class="split-row">
+          <div class="panel panel-pad">
+            <div class="panel-title">AI Operations Brief</div>
+            <p id="agentExplanation">Loading agent analysis…</p>
+            <div id="agentMode" class="micro" style="margin-top:8px;"></div>
+            <div class="legend-row">
+              <span><i class="dot real"></i> Real public charger data</span>
+              <span><i class="dot model"></i> Model estimate</span>
+              <span><i class="dot action"></i> Demonstrated action</span>
+            </div>
+          </div>
+          <div id="askSection" class="panel panel-pad">
+            <div class="panel-title">Ask ThermoCharge</div>
+            <div class="muted">Grounded in the computed data — never invented.</div>
+            <div id="askChips" class="ask-chips"></div>
+            <form id="askForm" class="ask-form">
+              <input id="askInput" type="text" placeholder="e.g. Which site needs attention first?" autocomplete="off" />
+              <button type="submit">Ask</button>
+            </form>
+            <div id="askAnswer" class="ask-answer hidden"></div>
+          </div>
+        </section>
+
+        <section id="assetsSection" class="panel panel-pad">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Charging assets</div>
+              <div class="panel-sub">Rated vs heat-adjusted usable capacity, per charger.</div>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Asset</th><th>Site</th><th>Temp</th><th>Rated</th><th>Usable</th><th>At risk</th><th>Loss</th><th>Risk</th></tr>
+              </thead>
+              <tbody id="chargerTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="traceSection" class="bottom-grid">
+          <div class="panel panel-pad">
+            <div class="panel-title">Agent tool trace</div>
+            <div id="trace" class="trace"></div>
+          </div>
+          <div class="panel panel-pad">
+            <div class="panel-title">Model &amp; provenance</div>
+            <div id="modelNotes" class="notes"></div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="page-foot">ThermoCharge AI · Hackathon demonstration · No real charger control is executed.</footer>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

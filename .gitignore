@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+.vscode/
+data/live/*.json
+!data/live/.gitkeep
+# The deployed app only ever reads these two processed files at runtime
+# (see app/data_store.py: choose_snapshot / build_replay). They contain no
+# API keys or secrets (verified by scan) and MUST be committed, or a fresh
+# clone/deploy silently falls back to SIMULATED DEV MODE.
+!data/live/snapshot.json
+!data/live/replay_snapshot.json

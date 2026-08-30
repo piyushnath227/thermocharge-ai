@@ -1,0 +1,41 @@
+{
+  "name": "South Phoenix EV Fast-Charging Corridor",
+  "city": "Phoenix",
+  "state": "Arizona",
+  "country": "USA",
+  "analysis_date": "2024-07-05",
+  "analysis_time_local": "15:00",
+  "replay_times_local": ["12:00", "13:00", "14:00", "15:00", "16:00", "17:00"],
+  "timezone": "America/Phoenix",
+  "why_this_date": "Phoenix reached 118°F on July 5, 2024 according to the U.S. National Weather Service. This creates a strong historical replay case without waiting for a future heat event.",
+  "polygon_aoi": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {"name": "South Phoenix pilot AOI", "approx_area_mi2": 7.0},
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-112.145, 33.372],
+            [-112.064, 33.372],
+            [-112.064, 33.398],
+            [-112.145, 33.398],
+            [-112.145, 33.372]
+          ]]
+        }
+      }
+    ]
+  },
+  "fortyguard": {
+    "filter_type": 1,
+    "granularity_m": 100,
+    "analytic_type": "tcm"
+  },
+  "commercial_assumptions": {
+    "risk_window_hours": 4,
+    "average_session_kwh": 55,
+    "energy_price_usd_per_kwh": 0.69,
+    "note": "These assumptions are used only to translate modeled kW loss into scenario-level business metrics. They are not claimed operator financials."
+  }
+}
